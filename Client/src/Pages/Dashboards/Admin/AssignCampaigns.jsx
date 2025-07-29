@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom"; // ✅ <-- Required for <Link> to work
+import Sidebar from "../../../components/Sidebar";
+
 
 const AssignCampaigns = () => {
   const [campaigns, setCampaigns] = useState([]);
@@ -16,7 +19,7 @@ const AssignCampaigns = () => {
         // 🔄 Replace with real API calls if available
         // const campaignsRes = await axios.get(`${VITE_API_URL}/api/campaigns`);
         // const servicemenRes = await axios.get(`${VITE_API_URL}/api/servicemen`);
-        
+
         // 🧪 Dummy data for now
         const dummyCampaigns = [
           { _id: "1", title: "Eid Sale", location: "Lahore" },
@@ -41,7 +44,10 @@ const AssignCampaigns = () => {
 
   const handleAssign = async () => {
     if (!selectedCampaign || !selectedServiceman) {
-      setMessage({ type: "error", content: "Please select both campaign and serviceman." });
+      setMessage({
+        type: "error",
+        content: "Please select both campaign and serviceman.",
+      });
       return;
     }
 
@@ -53,7 +59,10 @@ const AssignCampaigns = () => {
       // });
 
       // ✅ Simulate success
-      setMessage({ type: "success", content: "Campaign assigned successfully!" });
+      setMessage({
+        type: "success",
+        content: "Campaign assigned successfully!",
+      });
       setSelectedCampaign("");
       setSelectedServiceman("");
     } catch (error) {
@@ -63,57 +72,62 @@ const AssignCampaigns = () => {
   };
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">Assign Campaigns</h2>
+    <div className="flex min-h-screen bg-gray-100">
+      <Sidebar />
+      <div className="p-6">
+        <h2 className="text-2xl font-bold mb-4">Assign Campaigns</h2>
 
-      {message.content && (
-        <div
-          className={`mb-4 px-4 py-2 rounded ${
-            message.type === "error" ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
-          }`}
-        >
-          {message.content}
+        {message.content && (
+          <div
+            className={`mb-4 px-4 py-2 rounded ${
+              message.type === "error"
+                ? "bg-red-100 text-red-800"
+                : "bg-green-100 text-green-800"
+            }`}
+          >
+            {message.content}
+          </div>
+        )}
+
+        <div className="mb-4">
+          <label className="block mb-2 font-semibold">Select Campaign:</label>
+          <select
+            value={selectedCampaign}
+            onChange={(e) => setSelectedCampaign(e.target.value)}
+            className="border px-4 py-2 w-full rounded"
+          >
+            <option value="">-- Choose Campaign --</option>
+            {campaigns.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.title} ({c.location})
+              </option>
+            ))}
+          </select>
         </div>
-      )}
 
-      <div className="mb-4">
-        <label className="block mb-2 font-semibold">Select Campaign:</label>
-        <select
-          value={selectedCampaign}
-          onChange={(e) => setSelectedCampaign(e.target.value)}
-          className="border px-4 py-2 w-full rounded"
+        <div className="mb-4">
+          <label className="block mb-2 font-semibold">Select Serviceman:</label>
+          <select
+            value={selectedServiceman}
+            onChange={(e) => setSelectedServiceman(e.target.value)}
+            className="border px-4 py-2 w-full rounded"
+          >
+            <option value="">-- Choose Serviceman --</option>
+            {servicemen.map((s) => (
+              <option key={s._id} value={s._id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <button
+          onClick={handleAssign}
+          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
         >
-          <option value="">-- Choose Campaign --</option>
-          {campaigns.map((c) => (
-            <option key={c._id} value={c._id}>
-              {c.title} ({c.location})
-            </option>
-          ))}
-        </select>
+          Assign Campaign
+        </button>
       </div>
-
-      <div className="mb-4">
-        <label className="block mb-2 font-semibold">Select Serviceman:</label>
-        <select
-          value={selectedServiceman}
-          onChange={(e) => setSelectedServiceman(e.target.value)}
-          className="border px-4 py-2 w-full rounded"
-        >
-          <option value="">-- Choose Serviceman --</option>
-          {servicemen.map((s) => (
-            <option key={s._id} value={s._id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <button
-        onClick={handleAssign}
-        className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-      >
-        Assign Campaign
-      </button>
     </div>
   );
 };

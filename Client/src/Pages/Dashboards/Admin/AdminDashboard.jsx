@@ -1,7 +1,6 @@
-// src/Pages/Dashboards/Admin/AdminDashboard.jsx
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { Menu, X } from "lucide-react"; // Install lucide-react if not installed
+import { Menu } from "lucide-react";
+import Sidebar from "../../../components/Sidebar"; // Adjust path based on your folder structure
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
@@ -9,14 +8,12 @@ const AdminDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // Mock Users
     setUsers([
       { _id: "u1", name: "Alice", role: "client" },
       { _id: "u2", name: "Bob", role: "serviceman" },
       { _id: "u3", name: "Charlie", role: "client" },
     ]);
 
-    // Mock Boards
     setBoards([
       { _id: "b1", location: "Downtown", status: "held" },
       { _id: "b2", location: "Highway", status: "free" },
@@ -31,27 +28,9 @@ const AdminDashboard = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-white p-6 shadow-lg transform transition-transform duration-300 ease-in-out
-        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:static md:z-auto`}>
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-blue-600">Admin Panel</h2>
-          <button className="md:hidden" onClick={() => setSidebarOpen(false)}>
-            <X size={24} />
-          </button>
-        </div>
-        <nav className="flex flex-col space-y-4 text-sm font-medium text-gray-700">
-          <Link to="/admin/users" className="hover:text-blue-600">Manage Users</Link>
-          <Link to="/admin/campaigns" className="hover:text-blue-600">Manage Campaigns</Link>
-          <Link to="/admin/boards" className="hover:text-blue-600">Manage Boards</Link>
-          <Link to="/admin/boards/stats" className="hover:text-blue-600">View Board Status</Link>
-          <Link to="/admin/assign" className="hover:text-blue-600">Assign Campaigns</Link>
-        </nav>
-      </div>
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col w-full overflow-y-auto">
-        {/* Topbar for mobile */}
         <div className="p-4 bg-white shadow-md md:hidden flex justify-between items-center">
           <h1 className="text-xl font-bold text-gray-800">Admin Dashboard</h1>
           <button onClick={() => setSidebarOpen(true)}>
