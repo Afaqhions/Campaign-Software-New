@@ -1,0 +1,52 @@
+import mongoose from 'mongoose';
+
+const BoardsSchema = new mongoose.Schema({
+  Type: {
+    type: String,
+    enum: ['backlit', 'frontlit'], // only these two allowed
+    required: true
+  },
+  Location: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  Latitude: {
+    type: Number,
+    required: true
+  },
+  Longitude: {
+    type: Number,
+    required: true
+  },
+  City: {
+    type: String,
+    required: true
+  },
+  CreatedAt: {
+    type: Date,
+    default: Date.now
+  },
+  UpdatedAt: {
+    type: Date,
+    default: Date.now
+  },
+  Height: {
+    type: Number,
+    required: true
+  },
+  Width: {
+    type: Number,
+    required: true
+  }
+});
+
+// Automatically update `UpdatedAt` before each save
+BoardsSchema.pre('save', function (next) {
+  this.UpdatedAt = new Date();
+  next();
+});
+
+const BoardsModel = mongoose.model('Board', BoardsSchema);
+
+export default BoardsModel;

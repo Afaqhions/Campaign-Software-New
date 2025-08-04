@@ -27,20 +27,23 @@ const Sidebar = ({ isOpen, onClose }) => {
           <Link to="/admin-dashboard" className="hover:text-blue-600">
             Main Dashboard
           </Link>
-          <Link to="/admin/users" className="hover:text-blue-600">
+          <Link to="/manage-users" className="hover:text-blue-600">
             Manage Users
           </Link>
-          <Link to="/admin/campaigns" className="hover:text-blue-600">
+          <Link to="/manage-campaigns" className="hover:text-blue-600">
             Manage Campaigns
           </Link>
-          <Link to="/admin/boards" className="hover:text-blue-600">
+          <Link to="/manage-boards" className="hover:text-blue-600">
             Manage Boards
           </Link>
           <Link to="/admin/boards/stats" className="hover:text-blue-600">
-            View Board Status
+            View Board Stats
           </Link>
-          <Link to="/admin/assign" className="hover:text-blue-600">
+          <Link to="/assign-campaigns" className="hover:text-blue-600">
             Assign Campaigns
+          </Link>
+          <Link to="/" className="hover:text-blue-600">
+            Logout
           </Link>
         </nav>
       </div>

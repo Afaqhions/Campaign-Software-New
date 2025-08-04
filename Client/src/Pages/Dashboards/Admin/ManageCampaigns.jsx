@@ -1,252 +1,221 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "../../../components/Sidebar";
+import axios from "axios";
+import { toast } from "react-toastify";
 
 const ManageCampaigns = () => {
   const [campaigns, setCampaigns] = useState([]);
+  const [allBoards, setAllBoards] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState(null);
+
   const [formData, setFormData] = useState({
-    campaignName: "",
-    campaignDescription: "",
-    campaignPrice: "",
-    location: "",
-    latitude: "",
-    longitude: "",
-    image: null,
-    clientName: "",
-    clientEmail: "",
+    name: "",
     startDate: "",
     endDate: "",
+    noOfBoards: "",
+    selectedBoards: [],
   });
 
-  const timestamp = new Date().toLocaleString();
+  const token = localStorage.getItem("token");
+
+  // Fetch campaigns and boards
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [campaignRes, boardsRes] = await Promise.all([
+          axios.get(import.meta.env.VITE_API_URL_SEE_CAMPAIGNS, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get(import.meta.env.VITE_API_URL_SEE_BOARD, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        setCampaigns(Array.isArray(campaignRes.data) ? campaignRes.data : []);
+
+        const boards = Array.isArray(boardsRes.data.boards)
+          ? boardsRes.data.boards
+          : Array.isArray(boardsRes.data)
+          ? boardsRes.data
+          : [];
+
+        setAllBoards(boards);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast.error("Error loading campaigns or boards.");
+      }
+    };
+
+    fetchData();
+  }, [token]);
 
   const handleChange = (e) => {
-    const { name, value, type, files } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === "file" ? files[0] : value,
-    });
+    const { name, value, selectedOptions } = e.target;
+    if (name === "selectedBoards") {
+      const selected = Array.from(selectedOptions).map((opt) => opt.value);
+      setFormData((prev) => ({ ...prev, selectedBoards: selected }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const newCampaign = {
-      ...formData,
-      timestamp,
-      id: Date.now(),
-    };
-    setCampaigns((prev) => [...prev, newCampaign]);
 
+    const url = editId
+      ? `${import.meta.env.VITE_API_URL_UPDATE_CAMPAIGNS}/${editId}`
+      : import.meta.env.VITE_API_URL_CREATE_CAMPAIGN;
+
+    const method = editId ? "put" : "post";
+
+    try {
+      const res = await axios[method](url, formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      toast.success(`Campaign ${editId ? "updated" : "created"} successfully`);
+      setEditId(null);
+      setShowForm(false);
+      setFormData({ name: "", startDate: "", endDate: "", noOfBoards: "", selectedBoards: [] });
+
+      const updated = await axios.get(import.meta.env.VITE_API_URL_SEE_CAMPAIGNS, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCampaigns(updated.data);
+    } catch (err) {
+      console.error("Error submitting form:", err);
+      toast.error(err?.response?.data?.message || "Submission failed");
+    }
+  };
+
+  const handleEdit = (campaign) => {
     setFormData({
-      campaignName: "",
-      campaignDescription: "",
-      campaignPrice: "",
-      location: "",
-      latitude: "",
-      longitude: "",
-      image: null,
-      clientName: "",
-      clientEmail: "",
-      startDate: "",
-      endDate: "",
+      name: campaign.name,
+      startDate: campaign.startDate?.split("T")[0],
+      endDate: campaign.endDate?.split("T")[0],
+      noOfBoards: campaign.noOfBoards,
+      selectedBoards: campaign.selectedBoards.map((b) => b._id || b),
     });
+    setEditId(campaign._id);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id) => {
+    const confirm = window.confirm("Are you sure you want to delete this campaign?");
+    if (!confirm) return;
+
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_URL_DELET_CAMPAIGNS}/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Campaign deleted");
+      setCampaigns((prev) => prev.filter((c) => c._id !== id));
+    } catch (err) {
+      console.error("Delete error:", err);
+      toast.error(err?.response?.data?.message || "Delete failed");
+    }
   };
 
   return (
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
-
       <main className="flex-1 p-6 overflow-y-auto">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Manage Campaigns</h1>
+        <h1 className="text-2xl font-bold mb-6">Manage Campaigns</h1>
 
-        {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white shadow-md rounded-lg p-6 space-y-4 max-w-3xl mx-auto"
+        <button
+          onClick={() => {
+            setShowForm(!showForm);
+            setEditId(null);
+            setFormData({ name: "", startDate: "", endDate: "", noOfBoards: "", selectedBoards: [] });
+          }}
+          className="bg-blue-600 text-white px-4 py-2 rounded mb-4"
         >
-          {/* Campaign Info */}
-          <div>
-            <label className="block text-gray-700">Campaign Name</label>
+          {showForm ? "Close Form" : "Add Campaign"}
+        </button>
+
+        {showForm && (
+          <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow space-y-4 max-w-3xl">
             <input
+              name="name"
               type="text"
-              name="campaignName"
-              value={formData.campaignName}
+              value={formData.name}
               onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md"
+              placeholder="Campaign Name"
+              className="w-full border px-3 py-2 rounded"
               required
             />
-          </div>
-
-          <div>
-            <label className="block text-gray-700">Campaign Description</label>
-            <textarea
-              name="campaignDescription"
-              value={formData.campaignDescription}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md"
-              rows="3"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700">Campaign Price</label>
-            <input
-              type="number"
-              name="campaignPrice"
-              value={formData.campaignPrice}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md"
-              required
-            />
-          </div>
-
-          {/* Client Info */}
-          <div>
-            <label className="block text-gray-700">Client Name</label>
-            <input
-              type="text"
-              name="clientName"
-              value={formData.clientName}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700">Client Email</label>
-            <input
-              type="email"
-              name="clientEmail"
-              value={formData.clientEmail}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md"
-              required
-            />
-          </div>
-
-          {/* Campaign Dates */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-gray-700">Start Date</label>
+            <div className="grid grid-cols-2 gap-4">
               <input
-                type="date"
                 name="startDate"
+                type="date"
                 value={formData.startDate}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-md"
+                className="w-full border px-3 py-2 rounded"
                 required
               />
-            </div>
-            <div>
-              <label className="block text-gray-700">End Date</label>
               <input
-                type="date"
                 name="endDate"
+                type="date"
                 value={formData.endDate}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-md"
+                className="w-full border px-3 py-2 rounded"
                 required
               />
             </div>
-          </div>
-
-          {/* Location Info */}
-          <div>
-            <label className="block text-gray-700">Location</label>
             <input
-              type="text"
-              name="location"
-              value={formData.location}
+              name="noOfBoards"
+              type="number"
+              value={formData.noOfBoards}
               onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md"
+              placeholder="Number of Boards"
+              className="w-full border px-3 py-2 rounded"
               required
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-gray-700">Latitude</label>
-              <input
-                type="text"
-                name="latitude"
-                value={formData.latitude}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-md"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-gray-700">Longitude</label>
-              <input
-                type="text"
-                name="longitude"
-                value={formData.longitude}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-md"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Image */}
-          <div>
-            <label className="block text-gray-700">Campaign Image</label>
-            <input
-              type="file"
-              name="image"
-              accept="image/*"
+            <select
+              name="selectedBoards"
+              multiple
+              value={formData.selectedBoards}
               onChange={handleChange}
-              className="w-full"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700">Timestamp</label>
-            <input
-              type="text"
-              value={timestamp}
-              readOnly
-              className="w-full px-4 py-2 bg-gray-100 border rounded-md"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md w-full"
-          >
-            Add Campaign
-          </button>
-        </form>
-
-        {/* List */}
-        <div className="mt-10 max-h-96 overflow-y-auto">
-          {campaigns.length > 0 ? (
-            <ul className="space-y-4">
-              {campaigns.map((campaign, index) => (
-                <li key={index} className="bg-white p-4 rounded-lg shadow-md">
-                  <h3 className="text-lg font-semibold text-blue-900">{campaign.campaignName}</h3>
-                  <p className="text-sm text-gray-600">{campaign.campaignDescription}</p>
-                  <p className="text-sm">Price: ${campaign.campaignPrice}</p>
-                  <p className="text-sm">Client: {campaign.clientName} ({campaign.clientEmail})</p>
-                  <p className="text-sm">Start: {campaign.startDate}</p>
-                  <p className="text-sm">End: {campaign.endDate}</p>
-                  <p className="text-sm">Location: {campaign.location}</p>
-                  <p className="text-sm">Lat/Lon: {campaign.latitude}, {campaign.longitude}</p>
-                  <p className="text-sm">Timestamp: {campaign.timestamp}</p>
-                  {campaign.image && (
-                    <img
-                      src={URL.createObjectURL(campaign.image)}
-                      alt="Campaign"
-                      className="mt-2 max-w-xs rounded-md"
-                    />
-                  )}
-                </li>
+              className="w-full border px-3 py-2 rounded h-40"
+            >
+              {allBoards.map((board) => (
+                <option key={board._id} value={board._id}>
+                  {`${board.Type?.toUpperCase()} — ${board.Location} (${board.City})`}
+                </option>
               ))}
-            </ul>
+            </select>
+            <button type="submit" className="w-full bg-blue-700 text-white py-2 rounded">
+              {editId ? "Update Campaign" : "Create Campaign"}
+            </button>
+          </form>
+        )}
+
+        <div className="mt-10 space-y-4">
+          {campaigns.length > 0 ? (
+            campaigns.map((campaign) => (
+              <div key={campaign._id} className="bg-white p-4 rounded shadow">
+                <h2 className="text-lg font-semibold">{campaign.name}</h2>
+                <p>Boards: {campaign.noOfBoards}</p>
+                <p>
+                  Duration: {campaign.startDate?.split("T")[0]} → {campaign.endDate?.split("T")[0]}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Boards:{" "}
+                  {campaign.selectedBoards?.map((b) => b?.Location || b?.name || "Unknown").join(", ")}
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <button onClick={() => handleEdit(campaign)} className="bg-yellow-500 px-3 py-1 rounded text-white">
+                    Edit
+                  </button>
+                  <button onClick={() => handleDelete(campaign._id)} className="bg-red-600 px-3 py-1 rounded text-white">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))
           ) : (
-            <p className="text-center text-gray-500 mt-4">No campaigns added yet.</p>
+            <p className="text-gray-500">No campaigns found.</p>
           )}
         </div>
       </main>

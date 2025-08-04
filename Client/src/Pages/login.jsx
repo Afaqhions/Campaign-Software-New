@@ -1,6 +1,4 @@
-// src/pages/LoginPage.jsx
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -24,34 +22,38 @@ const LoginPage = () => {
     e.preventDefault();
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/login`,
+        import.meta.env.VITE_API_URL_LOGIN,
         formData
       );
 
       const { token, user } = response.data;
 
-      // Save token and user in localStorage
+      // Save token and user info
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("email", user.email); // 💡 needed for serviceman dashboard
 
-      // Navigate based on user role
-      switch (user.role) {
-        case "admin":
-          navigate("/admin-dashboard");
-          break;
-        case "client":
-          navigate("/client-dashboard");
-          break;
-        case "serviceman":
-          navigate("/serviceman-dashboard");
-          break;
-        default:
-          navigate("/");
-      }
+      // Set token globally for axios
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+      // Navigate based on role
+      navigate(`/${user.role}-dashboard`);
     } catch (err) {
-      setError("Invalid credentials. Please try again.");
+      console.error(err);
+      setError(
+        err.response?.data?.message || "Invalid credentials. Please try again."
+      );
     }
   };
+
+  // Optional: Redirect if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (token && user?.role) {
+      navigate(`/${user.role}-dashboard`);
+    }
+  }, []);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-blue-50 px-4">
@@ -83,6 +85,7 @@ const LoginPage = () => {
             onChange={handleChange}
             className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
+            <option value="manager">Manager</option>
             <option value="admin">Admin</option>
             <option value="client">Client</option>
             <option value="serviceman">Service Man</option>

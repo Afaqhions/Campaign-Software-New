@@ -1,135 +1,222 @@
-import React, { useState } from "react";
 import Sidebar from "../../../components/Sidebar";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const ManageUsers = () => {
-  const [clients, setClients] = useState([
-    { id: "U101", name: "Ali Khan", email: "ali@example.com", password: "pass123" },
-    { id: "U102", name: "Sara Ahmed", email: "sara@example.com", password: "pass456" }
-  ]);
-
-  const [servicemen, setServicemen] = useState([
-    { id: "S101", name: "Bilal Raza", email: "bilal@example.com", password: "123456" },
-    { id: "S102", name: "Asma Yousaf", email: "asma@example.com", password: "123789" }
-  ]);
+  const [users, setUsers] = useState([]);
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
+    address: "",
     password: "",
-    role: "Client"
+    role: "client",
   });
 
+  const [editUser, setEditUser] = useState(null); // user object being edited
+  const [editFormData, setEditFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    role: "client",
+  });
+
+  const token = localStorage.getItem("token");
+
+  // Fetch users
+  const fetchUsers = async () => {
+    try {
+      const res = await axios.get(import.meta.env.VITE_API_URL_SEE_USERS, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data.success) {
+        setUsers(res.data.users || []);
+      } else {
+        toast.error("Failed to fetch users");
+      }
+    } catch (error) {
+      console.error("Fetch error:", error);
+      toast.error("Error fetching users");
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  // Add new user input handler
   const handleChange = (e) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleAddUser = () => {
-    const newUser = {
-      id: `${formData.role[0].toUpperCase()}${Math.floor(Math.random() * 1000)}`,
-      ...formData
-    };
-
-    // Future API POST URL (placeholder)
-    // fetch("/api/users/add", { method: "POST", body: JSON.stringify(newUser) })
-
-    if (formData.role === "Client") {
-      setClients(prev => [...prev, newUser]);
-    } else {
-      setServicemen(prev => [...prev, newUser]);
+  // Add new user
+  const handleAddUser = async () => {
+    try {
+      const res = await axios.post(import.meta.env.VITE_API_URL_REGISTER, formData, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.data.success) {
+        toast.success(res.data.message || "User registered");
+        setFormData({
+          name: "",
+          email: "",
+          phone: "",
+          address: "",
+          password: "",
+          role: "client",
+        });
+        fetchUsers();
+      } else {
+        toast.error(res.data.message || "Registration failed");
+      }
+    } catch (error) {
+      console.error("Register error:", error);
+      toast.error(error.response?.data?.message || "Server error during registration");
     }
-
-    setFormData({ name: "", email: "", password: "", role: "Client" });
   };
 
-  const handleEdit = (user) => {
-    const updatedName = prompt("Edit name:", user.name);
-    if (!updatedName) return;
+  // Open Edit modal and populate with user data
+  const openEditModal = (user) => {
+    setEditUser(user);
+    setEditFormData({
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      address: user.address,
+      role: user.role,
+    });
+  };
 
-    if (user.id.startsWith("U")) {
-      setClients(prev =>
-        prev.map(u => u.id === user.id ? { ...u, name: updatedName } : u)
+  // Close Edit modal
+  const closeEditModal = () => {
+    setEditUser(null);
+  };
+
+  // Edit form input handler
+  const handleEditChange = (e) => {
+    setEditFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  // Submit edit form - update user on backend
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.put(
+        `${import.meta.env.VITE_API_URL_SEE_USERS}/${editUser._id}`,
+        editFormData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
-    } else {
-      setServicemen(prev =>
-        prev.map(u => u.id === user.id ? { ...u, name: updatedName } : u)
-      );
+      if (res.data.success) {
+        toast.success("User updated successfully");
+        closeEditModal();
+        fetchUsers();
+      } else {
+        toast.error(res.data.message || "Failed to update user");
+      }
+    } catch (err) {
+      console.error("Update error:", err);
+      toast.error("Error updating user");
     }
-
-    // Future API PUT URL
-    // fetch(`/api/users/update/${user.id}`, { method: "PUT", body: JSON.stringify(updatedUser) })
   };
 
-  const handleDelete = (id, role) => {
-    if (role === "Client") {
-      setClients(prev => prev.filter(user => user.id !== id));
-    } else {
-      setServicemen(prev => prev.filter(user => user.id !== id));
+  // Delete user
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this user?")) return;
+    try {
+      const res = await axios.delete(`${import.meta.env.VITE_API_URL_SEE_USERS}/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data.success) {
+        toast.success("User deleted");
+        fetchUsers();
+      } else {
+        toast.error("Delete failed");
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+      toast.error("Error deleting user");
     }
-
-    // Future API DELETE URL
-    // fetch(`/api/users/delete/${id}`, { method: "DELETE" })
   };
 
-  const renderTable = (users, role) => (
-    <div className="mb-12">
-      <h3 className="text-xl font-bold mb-4">{role}s</h3>
-      <div className="overflow-x-auto bg-white shadow-lg rounded-xl border border-gray-200">
-        <table className="min-w-full text-sm">
-          <thead className="bg-[#2563eb] text-white">
-            <tr>
-              <th className="py-3 px-4 text-left">User ID</th>
-              <th className="py-3 px-4 text-left">Name</th>
-              <th className="py-3 px-4 text-left">Email</th>
-              <th className="py-3 px-4 text-left">Password</th>
-              <th className="py-3 px-4 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id} className="border-t">
-                <td className="py-3 px-4">{user.id}</td>
-                <td className="py-3 px-4">{user.name}</td>
-                <td className="py-3 px-4">{user.email}</td>
-                <td className="py-3 px-4">{user.password}</td>
-                <td className="py-3 px-4 space-x-2">
-                  <button
-                    className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
-                    onClick={() => handleEdit(user)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                    onClick={() => handleDelete(user.id, role)}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {users.length === 0 && (
+  // Render users table by role
+  const renderTable = (role) => {
+    const filtered = users.filter((u) => u.role === role);
+    return (
+      <div key={role} className="mb-12">
+        <h3 className="text-xl font-bold mb-4 capitalize">{role}s</h3>
+        <div className="overflow-x-auto bg-white shadow-lg rounded-xl border border-gray-200">
+          <table className="min-w-full text-sm">
+            <thead className="bg-[#2563eb] text-white">
               <tr>
-                <td colSpan="5" className="text-center py-3 text-gray-500">
-                  No {role.toLowerCase()}s found.
-                </td>
+                <th className="py-3 px-4 text-left">Name</th>
+                <th className="py-3 px-4 text-left">Email</th>
+                <th className="py-3 px-4 text-left">Phone</th>
+                <th className="py-3 px-4 text-left">Address</th>
+                <th className="py-3 px-4 text-left">Role</th>
+                <th className="py-3 px-4 text-left">Actions</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((user) => (
+                <tr key={user._id} className="border-t">
+                  <td className="py-3 px-4">{user.name}</td>
+                  <td className="py-3 px-4">{user.email}</td>
+                  <td className="py-3 px-4">{user.phone}</td>
+                  <td className="py-3 px-4">{user.address}</td>
+                  <td className="py-3 px-4">{user.role}</td>
+                  <td className="py-3 px-4 space-x-2">
+                    <button
+                      className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
+                      onClick={() => openEditModal(user)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                      onClick={() => handleDelete(user._id)}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan="6" className="text-center py-3 text-gray-500">
+                    No {role}s found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="flex bg-gray-50 min-h-screen">
       <Sidebar />
+      <ToastContainer />
       <div className="flex-1 p-6 overflow-y-auto max-h-screen">
         <h2 className="text-3xl font-bold text-[#2563eb] mb-6">Manage Users</h2>
 
-        {/* Form to add user */}
+        {/* Add New User Form */}
         <div className="bg-white rounded-xl p-4 shadow-md border border-gray-200 mb-8">
           <h3 className="text-xl font-semibold mb-4">Add New User</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <input
               type="text"
               name="name"
@@ -147,6 +234,22 @@ const ManageUsers = () => {
               className="border p-2 rounded w-full"
             />
             <input
+              type="text"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              placeholder="Phone"
+              className="border p-2 rounded w-full"
+            />
+            <input
+              type="text"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              placeholder="Address"
+              className="border p-2 rounded w-full"
+            />
+            <input
               type="password"
               name="password"
               value={formData.password}
@@ -160,8 +263,10 @@ const ManageUsers = () => {
               onChange={handleChange}
               className="border p-2 rounded w-full"
             >
-              <option value="Client">Client</option>
-              <option value="Serviceman">Serviceman</option>
+              <option value="client">Client</option>
+              <option value="serviceman">Serviceman</option>
+              <option value="manager">Manager</option>
+              <option value="admin">Admin</option>
             </select>
           </div>
           <button
@@ -172,9 +277,82 @@ const ManageUsers = () => {
           </button>
         </div>
 
-        {/* Render tables */}
-        {renderTable(clients, "Client")}
-        {renderTable(servicemen, "Serviceman")}
+        {/* Tables by Role */}
+        {["client", "serviceman", "manager", "admin"].map((role) => (
+          <React.Fragment key={role}>{renderTable(role)}</React.Fragment>
+        ))}
+
+        {/* Edit User Modal */}
+        {editUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-xl font-semibold mb-4">Edit User</h3>
+              <form onSubmit={handleEditSubmit} className="space-y-4">
+                <input
+                  type="text"
+                  name="name"
+                  value={editFormData.name}
+                  onChange={handleEditChange}
+                  placeholder="Name"
+                  className="border p-2 rounded w-full"
+                  required
+                />
+                <input
+                  type="email"
+                  name="email"
+                  value={editFormData.email}
+                  onChange={handleEditChange}
+                  placeholder="Email"
+                  className="border p-2 rounded w-full"
+                  required
+                />
+                <input
+                  type="text"
+                  name="phone"
+                  value={editFormData.phone}
+                  onChange={handleEditChange}
+                  placeholder="Phone"
+                  className="border p-2 rounded w-full"
+                />
+                <input
+                  type="text"
+                  name="address"
+                  value={editFormData.address}
+                  onChange={handleEditChange}
+                  placeholder="Address"
+                  className="border p-2 rounded w-full"
+                />
+                <select
+                  name="role"
+                  value={editFormData.role}
+                  onChange={handleEditChange}
+                  className="border p-2 rounded w-full"
+                  required
+                >
+                  <option value="client">Client</option>
+                  <option value="serviceman">Serviceman</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <div className="flex justify-end space-x-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={closeEditModal}
+                    className="px-4 py-2 rounded border border-gray-400 hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded bg-[#2563eb] text-white hover:bg-[#1e40af]"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

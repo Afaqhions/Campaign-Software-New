@@ -1,78 +1,253 @@
-// src/Pages/Dashboards/Admin/ManageBoards.jsx
-import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { Menu, Pencil, Trash2 } from "lucide-react";
 import Sidebar from "../../../components/Sidebar";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const ManageBoards = () => {
+  const [showDialog, setShowDialog] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editId, setEditId] = useState(null);
+
+  const [formData, setFormData] = useState({
+    Type: "backlit",
+    Location: "",
+    City: "",
+    Latitude: "",
+    Longitude: "",
+    Height: "",
+    Width: "",
+  });
+
   const [boards, setBoards] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const fetchBoards = async () => {
-      try {
-        const data = [
-          { id: 1, location: "Lahore", status: "Free" },
-          { id: 2, location: "Karachi", status: "Held" },
-        ];
-        setBoards(data);
-      } catch (error) {
-        console.error("Failed to fetch boards", error);
-        setBoards([]);
-      }
-    };
-
     fetchBoards();
   }, []);
 
+  const fetchBoards = async () => {
+    try {
+      const res = await axios.get(import.meta.env.VITE_API_URL_SEE_BOARD);
+      setBoards(res.data.boards || []);
+    } catch (err) {
+      console.error("Error fetching boards:", err);
+      toast.error("Failed to load boards.");
+    }
+  };
+
+  const toggleDialog = () => setShowDialog(!showDialog);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (isEditing) {
+        await axios.put(`${import.meta.env.VITE_API_URL_UPDATE_BOARD}/${editId}`, formData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
+        toast.success("Board updated successfully");
+      } else {
+        await axios.post(import.meta.env.VITE_API_URL_ADD_BOARD, formData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        });
+        toast.success("Board added successfully");
+      }
+
+      setFormData({
+        Type: "backlit",
+        Location: "",
+        City: "",
+        Latitude: "",
+        Longitude: "",
+        Height: "",
+        Width: "",
+      });
+      setIsEditing(false);
+      setEditId(null);
+      setShowDialog(false);
+      fetchBoards();
+    } catch (err) {
+      console.error("Error saving board:", err);
+      if (err.response?.data?.message?.toLowerCase().includes("duplicate")) {
+        toast.error("Board with this location already exists.");
+      } else {
+        toast.error("Failed to save board.");
+      }
+    }
+  };
+
+  const handleEdit = (board) => {
+    setFormData({
+      Type: board.Type,
+      Location: board.Location,
+      City: board.City || "",
+      Latitude: board.Latitude,
+      Longitude: board.Longitude,
+      Height: board.Height,
+      Width: board.Width,
+    });
+    setIsEditing(true);
+    setEditId(board._id);
+    setShowDialog(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this board?")) return;
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_URL_DELETE_BOARD}/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      toast.success("Board deleted successfully");
+      fetchBoards();
+    } catch (err) {
+      console.error("Error deleting board:", err);
+      toast.error("Failed to delete board.");
+    }
+  };
+
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <Sidebar />
+    <div className="flex h-screen overflow-hidden bg-gray-100">
+      <ToastContainer />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Main Content */}
-      <div className="flex-1 p-6 bg-gray-100 overflow-auto">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">Manage Boards</h2>
-        <p className="text-gray-600 mb-4">Create, view, edit, or delete boards.</p>
+      <div className="flex-1 flex flex-col w-full overflow-y-auto">
+        <div className="p-4 bg-white shadow-md md:hidden flex justify-between items-center">
+          <h1 className="text-xl font-bold text-gray-800">Manage Boards</h1>
+          <button onClick={() => setSidebarOpen(true)}>
+            <Menu size={24} />
+          </button>
+        </div>
 
-        <button className="mb-4 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
-          Create New Board
-        </button>
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+            <h2 className="text-2xl font-bold text-blue-600">Boards</h2>
+            <button
+              onClick={() => {
+                setIsEditing(false);
+                setFormData({ Type: "backlit", Location: "", City: "", Latitude: "", Longitude: "", Height: "", Width: "" });
+                toggleDialog();
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+            >
+              Add Board
+            </button>
+          </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border rounded-md shadow">
-            <thead className="bg-gray-200 text-gray-700">
-              <tr>
-                <th className="py-2 px-4 border">Board ID</th>
-                <th className="py-2 px-4 border">Location</th>
-                <th className="py-2 px-4 border">Status</th>
-                <th className="py-2 px-4 border">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {boards.length === 0 ? (
-                <tr>
-                  <td className="py-2 px-4 border text-center" colSpan="4">
-                    No boards available
-                  </td>
-                </tr>
-              ) : (
-                boards.map((board) => (
-                  <tr key={board.id}>
-                    <td className="py-2 px-4 border">{board.id}</td>
-                    <td className="py-2 px-4 border">{board.location}</td>
-                    <td className="py-2 px-4 border">{board.status}</td>
-                    <td className="py-2 px-4 border space-x-2">
-                      <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded">
-                        Edit
+          {showDialog && (
+            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 px-4">
+              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                <h3 className="text-xl font-semibold text-blue-600 mb-4">
+                  {isEditing ? "Edit Board" : "Add New Board"}
+                </h3>
+                <form onSubmit={handleSubmit} className="space-y-3">
+                  {[
+                    "Type",
+                    "Location",
+                    "City",
+                    "Latitude",
+                    "Longitude",
+                    "Height",
+                    "Width",
+                  ].map((field) => (
+                    <div key={field}>
+                      <label className="block text-sm font-medium mb-1">{field}</label>
+                      {field === "Type" ? (
+                        <select
+                          name={field}
+                          value={formData[field]}
+                          onChange={handleChange}
+                          className="w-full p-2 border rounded"
+                          required
+                        >
+                          <option value="backlit">Backlit</option>
+                          <option value="frontlit">Frontlit</option>
+                        </select>
+                      ) : (
+                        <input
+                          type={[
+                            "Latitude",
+                            "Longitude",
+                            "Height",
+                            "Width",
+                          ].includes(field)
+                            ? "number"
+                            : "text"}
+                          step="any"
+                          name={field}
+                          value={formData[field]}
+                          onChange={handleChange}
+                          className="w-full p-2 border rounded"
+                          required
+                        />
+                      )}
+                    </div>
+                  ))}
+                  <div className="flex justify-end gap-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={toggleDialog}
+                      className="px-4 py-2 border border-gray-400 rounded hover:bg-gray-100"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      {isEditing ? "Update" : "Save"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-8">
+            <h3 className="text-xl font-semibold mb-4 text-blue-600">All Boards</h3>
+            {boards.length === 0 ? (
+              <p className="text-gray-500">No boards found.</p>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+                {boards.map((board) => (
+                  <div
+                    key={board._id}
+                    className="bg-white p-4 rounded shadow border hover:shadow-lg transition relative"
+                  >
+                    <div className="absolute top-2 right-2 flex gap-2">
+                      <button onClick={() => handleEdit(board)} className="text-blue-500 hover:text-blue-700">
+                        <Pencil size={16} />
                       </button>
-                      <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded">
-                        Delete
+                      <button onClick={() => handleDelete(board._id)} className="text-red-500 hover:text-red-700">
+                        <Trash2 size={16} />
                       </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                    </div>
+                    <h4 className="font-bold text-blue-600">{board.Type.toUpperCase()}</h4>
+                    <p className="text-sm text-gray-700">
+                      <strong>Location:</strong> {board.Location}
+                    </p>
+                    <p className="text-sm text-gray-700">
+                      <strong>City:</strong> {board.City || "N/A"}
+                    </p>
+                    <p className="text-sm text-gray-700">
+                      <strong>Lat/Lon:</strong> {board.Latitude}, {board.Longitude}
+                    </p>
+                    <p className="text-sm text-gray-700">
+                      <strong>Size:</strong> {board.Height}m x {board.Width}m
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Created: {new Date(board.CreatedAt).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
