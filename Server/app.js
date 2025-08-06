@@ -12,6 +12,16 @@ import cors from "cors";
 // Middleware
 app.use(cors())
 app.use(express.json());
+
+// Add request logging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  if (req.query.email) {
+    console.log('Query email:', req.query.email);
+  }
+  next();
+});
+
 // Routes
 app.use('/api',routes);
 // To store pic locally

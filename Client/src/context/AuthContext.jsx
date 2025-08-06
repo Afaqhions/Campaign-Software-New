@@ -1,4 +1,3 @@
-// src/context/AuthContext.jsx
 import { createContext, useContext, useEffect, useState, useMemo } from "react";
 
 const AuthContext = createContext();
@@ -6,26 +5,69 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem("user");
-    return storedUser ? JSON.parse(storedUser) : null;
+    try {
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch (error) {
+      console.error("Failed to parse stored user:", error);
+      return null;
+    }
   });
 
-  // Keep localStorage in sync with user state and handle token cleanup on logout
+  const [token, setToken] = useState(() => localStorage.getItem("token") || null);
+
+  // Sync user & token to localStorage
   useEffect(() => {
-    if (user) {
+    if (user && token) {
       localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("token", token);
+
+      // Store email globally for any role
+      localStorage.setItem("email", user.email);
+
+      // For client, store in clientEmail too (optional use)
+      if (user.role === "client") {
+        localStorage.setItem("clientEmail", user.email);
+      }
     } else {
       localStorage.removeItem("user");
-      localStorage.removeItem("token"); // 🔥 Remove token on logout
+      localStorage.removeItem("token");
+      localStorage.removeItem("email");
+      localStorage.removeItem("clientEmail");
     }
-  }, [user]);
+  }, [user, token]);
 
-  const value = useMemo(() => ({ user, setUser }), [user]);
+  // Restore user and token on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    const storedToken = localStorage.getItem("token");
+    if (storedUser && storedToken) {
+      try {
+        setUser(JSON.parse(storedUser));
+        setToken(storedToken);
+      } catch (error) {
+        console.error("Invalid stored user, logging out.");
+        logout();
+      }
+    }
+  }, []);
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const login = (userData, tokenValue) => {
+    setUser(userData);
+    setToken(tokenValue);
+  };
+
+  const logout = () => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
+    localStorage.removeItem("clientEmail");
+  };
+
+  const value = useMemo(() => ({ user, token, setUser, login, logout }), [user, token]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => useContext(AuthContext);

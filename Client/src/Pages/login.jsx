@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useAuth } from "../context/AuthContext";
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    role: "client", // default role
+    role: "admin", // default role
   });
 
   const [error, setError] = useState("");
@@ -20,33 +22,46 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     try {
       const response = await axios.post(
         import.meta.env.VITE_API_URL_LOGIN,
-        formData
+        {
+          email: formData.email,
+          password: formData.password,
+        }
       );
 
       const { token, user } = response.data;
 
-      // Save token and user info
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("email", user.email); // 💡 needed for serviceman dashboard
+      // ✅ Optional check (allow hierarchical role access)
+      const allowedRoles = {
+        admin: ["admin"],
+        manager: ["manager", "admin"], // ✅ manager can access admin routes
+        client: ["client"],
+        serviceman: ["serviceman"],
+      };
 
-      // Set token globally for axios
+      if (!allowedRoles[user.role]?.includes(formData.role)) {
+        setError("Invalid credentials. Please try again.");
+        return;
+      }
+
+      // ✅ Store auth data
+      login(user, token);
+      localStorage.setItem("email", user.email);
+
+      // ✅ Set default headers for future requests
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
-      // Navigate based on role
+      // ✅ Redirect to role dashboard
       navigate(`/${user.role}-dashboard`);
     } catch (err) {
       console.error(err);
-      setError(
-        err.response?.data?.message || "Invalid credentials. Please try again."
-      );
+      setError("Invalid credentials. Please try again.");
     }
   };
 
-  // Optional: Redirect if already logged in
   useEffect(() => {
     const token = localStorage.getItem("token");
     const user = JSON.parse(localStorage.getItem("user"));
@@ -58,7 +73,9 @@ const LoginPage = () => {
   return (
     <div className="flex items-center justify-center min-h-screen bg-blue-50 px-4">
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md border">
-        <h2 className="text-2xl font-bold text-center mb-6 text-blue-600">Login</h2>
+        <h2 className="text-2xl font-bold text-center mb-6 text-blue-600">
+          Login
+        </h2>
         {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
@@ -85,8 +102,8 @@ const LoginPage = () => {
             onChange={handleChange}
             className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="manager">Manager</option>
             <option value="admin">Admin</option>
+            <option value="manager">Manager</option>
             <option value="client">Client</option>
             <option value="serviceman">Service Man</option>
           </select>

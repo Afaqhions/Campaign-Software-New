@@ -1,34 +1,41 @@
-import mongoose, { mongo } from 'mongoose'
+import mongoose from 'mongoose';
 
-const verficationSchema = new mongoose.Schema({
-    campaignName: [
-        {
-            type:mongoose.Schema.Types.ObjectId,
-            ref:"Campaign"
-        }
-    ],
-    serviceMan: [
-        {
-            type:mongoose.Schema.Types.ObjectId,
-            ref: 'ServiceMan'
-        }
-    ],
-    serviceManLocation:[
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'PicByServiceMan'
-        }
-    ],
-    boardLiveLocation:[
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'BoardLiveLocation'
-        }
-    ],
-    status:{
-        type: String,
-        enum: ['Pending', 'Verified'],
-        default: 'Pending',
-        required: true
-    }
-})
+const verificationSchema = new mongoose.Schema(
+  {
+    campaign: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Campaign",
+      required: true,
+    },
+    serviceMan: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ServiceMan",
+      required: true,
+    },
+    serviceManUpload: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PicByServiceMan",
+      required: true,
+    },
+    board: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Board",
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ["Pending", "Verified"],
+      default: "Pending",
+      required: true,
+    },
+    distanceInMeters: {
+      type: Number,
+      default: null,
+    },
+  },
+  { timestamps: true }
+);
+
+// ✅ Exporting the model
+const VerificationModel = mongoose.model("Verification", verificationSchema);
+export default VerificationModel;

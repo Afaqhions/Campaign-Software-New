@@ -1,7 +1,16 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
+import { useAuth } from "../context/AuthContext"; // 👈 import context
 
 const Sidebar = ({ isOpen, onClose }) => {
+  const { logout } = useAuth(); // 👈 use logout from context
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();            // clear user & token
+    navigate("/login");  // redirect to login
+  };
+
   return (
     <>
       {/* Overlay for mobile */}
@@ -36,15 +45,23 @@ const Sidebar = ({ isOpen, onClose }) => {
           <Link to="/manage-boards" className="hover:text-blue-600">
             Manage Boards
           </Link>
-          <Link to="/admin/boards/stats" className="hover:text-blue-600">
+          <Link to="/view-board-stats" className="hover:text-blue-600">
             View Board Stats
           </Link>
           <Link to="/assign-campaigns" className="hover:text-blue-600">
             Assign Campaigns
           </Link>
-          <Link to="/" className="hover:text-blue-600">
-            Logout
+          <Link to="/verify-campaigns" className="hover:text-blue-600">
+            Verify Campaigns
           </Link>
+
+          {/* 👇 Replaces Link with button for logout */}
+          <button
+            onClick={handleLogout}
+            className="text-left hover:text-red-600 transition"
+          >
+            Logout
+          </button>
         </nav>
       </div>
     </>

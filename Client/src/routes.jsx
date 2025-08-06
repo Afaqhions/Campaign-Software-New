@@ -1,3 +1,4 @@
+
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./Components/ProtectedRoute";
 
@@ -5,10 +6,10 @@ import ProtectedRoute from "./Components/ProtectedRoute";
 import HomePage from "./Pages/landingPage";
 import LoginPage from "./Pages/login";
 
-// Dashboards (Protected)
+// Dashboards
 import AdminDashboard from "./Pages/Dashboards/Admin/AdminDashboard";
 import ClientDashboard from "./Pages/Dashboards/ClientPages/ClientDashboard";
-import ManagerDashboard from "./Pages/Dashboards/Admin/AdminDashboard"; // You can change this if needed
+import ManagerDashboard from "./Pages/Dashboards/Admin/AdminDashboard";
 import ServiceDashboard from "./Pages/Dashboards/ServiceMan/ServicemanDashboard";
 
 // Admin Pages
@@ -16,6 +17,9 @@ import AssignCampaigns from "./Pages/Dashboards/Admin/AssignCampaigns";
 import ManageBoards from "./Pages/Dashboards/Admin/ManageBoards";
 import ManageUsers from "./Pages/Dashboards/Admin/ManageUsers";
 import ManageCampaigns from "./Pages/Dashboards/Admin/ManageCampaigns";
+import ViewBoardStats from "./Pages/Dashboards/Admin/ViewBoardStats";
+import VerifyUploads from "./Pages/Dashboards/Admin/VerifyUploads";
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -23,16 +27,15 @@ const AppRoutes = () => {
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
 
-      {/* Admin */}
-      <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+      {/* Admin Pages (accessible to both admin and manager) */}
+      <Route element={<ProtectedRoute allowedRoles={["admin", "manager"]} />}>
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/assign-campaigns" element={<AssignCampaigns />} />
         <Route path="/manage-boards" element={<ManageBoards />} />
         <Route path="/manage-users" element={<ManageUsers />} />
         <Route path="/manage-campaigns" element={<ManageCampaigns />} />
-        <Route path="/admin-dashboard" element={<AdminDashboard />} />
-        <Route path="/admin-dashboard" element={<AdminDashboard />} />
-
+        <Route path="/view-board-stats" element={<ViewBoardStats />} />
+        <Route path="/verify-campaigns" element={<VerifyUploads />} />
       </Route>
 
       {/* Client */}
@@ -45,7 +48,7 @@ const AppRoutes = () => {
         <Route path="/serviceman-dashboard" element={<ServiceDashboard />} />
       </Route>
 
-      {/* Manager */}
+      {/* Manager Dashboard (own page, not admin layout) */}
       <Route element={<ProtectedRoute allowedRoles={["manager"]} />}>
         <Route path="/manager-dashboard" element={<ManagerDashboard />} />
       </Route>

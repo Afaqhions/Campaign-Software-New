@@ -29,6 +29,8 @@ export const uploadServiceManPic = async (req, res) => {
 
     const normalizedPath = req.file.path.replace(/\\/g, "/");
 
+    console.log("Creating new entry with serviceManEmail:", serviceManEmail);
+    
     const newEntry = new PicByServiceMan({
       campaignName,
       serviceManEmail,
@@ -42,6 +44,7 @@ export const uploadServiceManPic = async (req, res) => {
 
     await newEntry.save();
     console.log("Saved new entry:", newEntry);
+    console.log("Saved serviceManEmail:", newEntry.serviceManEmail);
 
     res.status(201).json({
       message: "Upload successful",
@@ -54,22 +57,36 @@ export const uploadServiceManPic = async (req, res) => {
 };
 
 // Get all uploads by a specific service man
-export const getServiceManUploads = async (req, res) => {
+import VerificationModel from "../Database/verificationModel.js"; // ✅ import verification model
+
+
+export const getUploads = async (req, res) => {
   try {
-    const { email } = req.query;
-    console.log("Fetching uploads for email:", email);
+    const email = req.query.email;
 
     if (!email) {
-      console.log("No email provided in query");
-      return res.status(400).json({ message: "Service man email is required." });
+      return res.status(400).json({ message: "Email is required in query" });
     }
 
-    const uploads = await PicByServiceMan.find({ serviceManEmail: email.toLowerCase() }).sort({ createdAt: -1 });
-    console.log("Found uploads:", uploads.length);
+    const uploads = await PicByServiceMan.find({ serviceManEmail: email }).sort({ createdAt: -1 });
 
-    res.status(200).json({ data: uploads });
+    const uploadsWithStatus = await Promise.all(
+      uploads.map(async (upload) => {
+        const verification = await VerificationModel.findOne({
+          serviceManUpload: upload._id,
+          status: "Verified",
+        });
+
+        return {
+          ...upload.toObject(),
+          isVerified: !!verification,
+        };
+      })
+    );
+
+    return res.status(200).json({ data: uploadsWithStatus });
   } catch (error) {
-    console.error("Fetch error:", error);
-    res.status(500).json({ message: "Server error while fetching uploads." });
+    console.error("Error fetching uploads:", error);
+    return res.status(500).json({ message: "Failed to fetch uploads" });
   }
 };
