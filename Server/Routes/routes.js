@@ -21,6 +21,8 @@ import {
   createCampaign,
   deleteCampaign,
   getAllCampaigns,
+  getBoardsByCity,
+  getServiceMenByCity,
   updateCampaign,
 } from '../Controllers/addCampaignController.js';
 
@@ -60,6 +62,9 @@ router.get("/boards", getBoards);
 router.post("/boards/create", verifyToken, createBoard);
 router.put("/boards/:id", verifyToken, updateBoard);
 router.delete("/boards/:id", verifyToken, deleteBoard);
+router.get("/boards/:city", getBoardsByCity);
+router.get("/service-men/:city", getServiceMenByCity);
+
 
 // ====================
 // ✅ Campaign Routes

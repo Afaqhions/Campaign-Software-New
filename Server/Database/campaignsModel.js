@@ -7,11 +7,24 @@ const campaignSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    clientName: {
+      type: String,
+      required: true,
+    },
     clientEmail: {
       type: String,
       required: true,
       unique: true,
       match: [/^\S+@\S+\.\S+$/, "Please enter a valid email address"],
+    },
+    serviceManEmail: {
+      type: String,
+      required: true,
+      match: [/^\S+@\S+\.\S+$/, "Please enter a valid email address"],
+    },
+    city: {
+      type: String,
+      required: true,
     },
     startDate: {
       type: Date,
@@ -29,6 +42,7 @@ const campaignSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Board",
+        required: true
       },
     ],
     price: {
@@ -40,5 +54,4 @@ const campaignSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const CampaignModel = mongoose.model("Campaign", campaignSchema);
-export default CampaignModel;
+export default mongoose.model("Campaign", campaignSchema);

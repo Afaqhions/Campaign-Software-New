@@ -15,7 +15,7 @@ const generateToken = (user) => {
     },
     process.env.JWT_SECRET,
     {
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+      expiresIn: process.env.JWT_EXPIRES_IN,
     }
   );
 };
@@ -58,6 +58,9 @@ export const loginController = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
+        address: user.address,
+        city: user.city,
         role: user.role,
       },
     });
@@ -67,23 +70,33 @@ export const loginController = async (req, res) => {
   }
 };
 
-// ✅ Register Controller
+// ✅ Register Controller with unique validation
 export const registerUserController = async (req, res) => {
   try {
-    const { name, email, phone, address, password, role } = req.body;
+    const { name, email, phone, address, city, password, role } = req.body;
 
-    if (!name || !email || !phone || !address || !password) {
+    if (!name || !email || !phone || !address || !city || !password) {
       return res.status(400).json({
         success: false,
         message: 'All fields are required',
       });
     }
 
-    const existingUser = await UserModel.findOne({ email });
-    if (existingUser) {
+    // Check unique email
+    const existingEmail = await UserModel.findOne({ email });
+    if (existingEmail) {
       return res.status(400).json({
         success: false,
-        message: 'User already exists',
+        message: 'Email already in use',
+      });
+    }
+
+    // Check unique phone
+    const existingPhone = await UserModel.findOne({ phone });
+    if (existingPhone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number already in use',
       });
     }
 
@@ -94,8 +107,9 @@ export const registerUserController = async (req, res) => {
       email,
       phone,
       address,
+      city,
       password: hashedPassword,
-      role,
+      role: role || 'client',
     });
 
     await newUser.save();
@@ -110,6 +124,9 @@ export const registerUserController = async (req, res) => {
         id: newUser._id,
         name: newUser.name,
         email: newUser.email,
+        phone: newUser.phone,
+        address: newUser.address,
+        city: newUser.city,
         role: newUser.role,
       },
     });
@@ -125,7 +142,7 @@ export const registerUserController = async (req, res) => {
 // ✅ Get All Users
 export const getAllUsersController = async (req, res) => {
   try {
-    const users = await UserModel.find({}, '-password'); // exclude password
+    const users = await UserModel.find({}, '-password');
     res.status(200).json({ success: true, users });
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -133,13 +150,13 @@ export const getAllUsersController = async (req, res) => {
   }
 };
 
-// ✅ Update User by ID
+// ✅ Update User by ID with unique validation
 export const updateUserController = async (req, res) => {
   try {
     const userId = req.params.id;
     const updates = req.body;
 
-    const allowedUpdates = ['name', 'email', 'phone', 'address', 'role'];
+    const allowedUpdates = ['name', 'email', 'phone', 'address', 'city', 'role'];
     const isValidUpdate = Object.keys(updates).every((key) =>
       allowedUpdates.includes(key)
     );
@@ -147,6 +164,30 @@ export const updateUserController = async (req, res) => {
     if (!isValidUpdate) {
       return res.status(400).json({ success: false, message: 'Invalid update fields' });
     }
+
+    // Unique email check if email is being updated
+    if (updates.email) {
+      const emailExists = await UserModel.findOne({
+        email: updates.email,
+        _id: { $ne: userId }, // exclude current user
+      });
+      if (emailExists) {
+        return res.status(400).json({ success: false, message: 'Email already in use' });
+      }
+    }
+
+    // Unique phone check if phone is being updated
+    if (updates.phone) {
+      const phoneExists = await UserModel.findOne({
+        phone: updates.phone,
+        _id: { $ne: userId },
+      });
+      if (phoneExists) {
+        return res.status(400).json({ success: false, message: 'Phone number already in use' });
+      }
+    }
+
+    updates.updatedAt = new Date();
 
     const updatedUser = await UserModel.findByIdAndUpdate(userId, updates, {
       new: true,

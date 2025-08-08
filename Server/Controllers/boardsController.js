@@ -15,14 +15,22 @@ export const getBoards = async (req, res) => {
 // @route   POST /admin/boards/create
 export const createBoard = async (req, res) => {
   try {
-    const { Type, Location, Latitude, Longitude, Height, Width, City } = req.body;
+    const { BoardNo, Type, Location, Latitude, Longitude, Height, Width, City } = req.body;
 
-    const existing = await BoardsModel.findOne({ Location });
-    if (existing) {
+    // Check if BoardNo already exists
+    const existingBoardNo = await BoardsModel.findOne({ BoardNo });
+    if (existingBoardNo) {
+      return res.status(400).json({ message: "Board with this BoardNo already exists." });
+    }
+
+    // Check if Location already exists
+    const existingLocation = await BoardsModel.findOne({ Location });
+    if (existingLocation) {
       return res.status(400).json({ message: "Board with this location already exists." });
     }
 
     const newBoard = new BoardsModel({
+      BoardNo,
       Type,
       Location,
       Latitude,
@@ -44,13 +52,30 @@ export const createBoard = async (req, res) => {
 export const updateBoard = async (req, res) => {
   try {
     const { id } = req.params;
-    const { Type, Location, Latitude, Longitude, Height, Width, City } = req.body;
+    const { BoardNo, Type, Location, Latitude, Longitude, Height, Width, City } = req.body;
 
     const board = await BoardsModel.findById(id);
     if (!board) return res.status(404).json({ message: "Board not found" });
 
+    // Ensure BoardNo is unique if changed
+    if (BoardNo && BoardNo !== board.BoardNo) {
+      const existingBoardNo = await BoardsModel.findOne({ BoardNo });
+      if (existingBoardNo) {
+        return res.status(400).json({ message: "Board with this BoardNo already exists." });
+      }
+      board.BoardNo = BoardNo;
+    }
+
+    // Ensure Location is unique if changed
+    if (Location && Location !== board.Location) {
+      const existingLocation = await BoardsModel.findOne({ Location });
+      if (existingLocation) {
+        return res.status(400).json({ message: "Board with this location already exists." });
+      }
+      board.Location = Location;
+    }
+
     board.Type = Type;
-    board.Location = Location;
     board.Latitude = Latitude;
     board.Longitude = Longitude;
     board.Height = Height;

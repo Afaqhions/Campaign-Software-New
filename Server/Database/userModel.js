@@ -30,6 +30,10 @@ const userSchema = new mongoose.Schema({
         type:Date,
         default:Date.now
     },
+    city:{
+        type:String,
+        required:true
+    },
     role:{
         type:String,
         enum:['admin', 'client','serviceman','manager'], // only these roles allowed

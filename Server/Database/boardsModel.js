@@ -1,9 +1,14 @@
 import mongoose from 'mongoose';
 
 const BoardsSchema = new mongoose.Schema({
+  BoardNo: {
+    type: String,
+    required: true,
+    unique: true // prevents duplicates
+  },
   Type: {
     type: String,
-    enum: ['backlit', 'frontlit'], // only these two allowed
+    enum: ['backlit', 'frontlit'],
     required: true
   },
   Location: {
