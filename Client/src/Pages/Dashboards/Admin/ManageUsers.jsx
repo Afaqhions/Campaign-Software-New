@@ -6,8 +6,6 @@ import "react-toastify/dist/ReactToastify.css";
 
 const ManageUsers = () => {
   const [users, setUsers] = useState([]);
-  const [boards, setBoards] = useState([]);
-  const [servicemen, setServicemen] = useState([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -17,8 +15,6 @@ const ManageUsers = () => {
     city: "",
     password: "",
     role: "client",
-    boardId: "",
-    servicemanId: "",
   });
 
   const [editUser, setEditUser] = useState(null);
@@ -29,8 +25,6 @@ const ManageUsers = () => {
     address: "",
     city: "",
     role: "client",
-    boardId: "",
-    servicemanId: "",
   });
 
   const token = localStorage.getItem("token");
@@ -55,52 +49,16 @@ const ManageUsers = () => {
     fetchUsers();
   }, []);
 
-  // fetch boards by city
-  const fetchBoardsByCity = async (city) => {
-    if (!city) return;
-    try {
-      const res = await axios.get(
-        import.meta.env.VITE_API_URL_FETCH_BOARDS_BY_CITY.replace(":city", city),
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (res.data.success) {
-        setBoards(res.data.boards || []);
-      } else {
-        setBoards([]);
-      }
-    } catch (err) {
-      console.error("Boards fetch error:", err);
-      setBoards([]);
-    }
-  };
-
-  // fetch servicemen by city
-  const fetchServiceMenByCity = async (city) => {
-    if (!city) return;
-    try {
-      const res = await axios.get(
-        import.meta.env.VITE_API_URL_FETCH_SERVICE_MAN_BY_CITY.replace(":city", city),
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (res.data.success) {
-        setServicemen(res.data.servicemen || []);
-      } else {
-        setServicemen([]);
-      }
-    } catch (err) {
-      console.error("Servicemen fetch error:", err);
-      setServicemen([]);
-    }
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
 
-    if (name === "city") {
-      fetchBoardsByCity(value);
-      fetchServiceMenByCity(value);
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+
+    setEditFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   // Email uniqueness check
@@ -131,12 +89,16 @@ const ManageUsers = () => {
     }
 
     try {
-      const res = await axios.post(import.meta.env.VITE_API_URL_REGISTER, formData, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await axios.post(
+        import.meta.env.VITE_API_URL_REGISTER,
+        formData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       if (res.data.success) {
         toast.success(res.data.message || "User registered");
         setFormData({
@@ -147,18 +109,16 @@ const ManageUsers = () => {
           city: "",
           password: "",
           role: "client",
-          boardId: "",
-          servicemanId: "",
         });
-        setBoards([]);
-        setServicemen([]);
         fetchUsers();
       } else {
         toast.error(res.data.message || "Registration failed");
       }
     } catch (error) {
       console.error("Register error:", error);
-      toast.error(error.response?.data?.message || "Server error during registration");
+      toast.error(
+        error.response?.data?.message || "Server error during registration"
+      );
     }
   };
 
@@ -171,29 +131,11 @@ const ManageUsers = () => {
       address: user.address,
       city: user.city || "",
       role: user.role,
-      boardId: user.boardId || "",
-      servicemanId: user.servicemanId || "",
     });
-    if (user.city) {
-      fetchBoardsByCity(user.city);
-      fetchServiceMenByCity(user.city);
-    }
   };
 
   const closeEditModal = () => {
     setEditUser(null);
-    setBoards([]);
-    setServicemen([]);
-  };
-
-  const handleEditChange = (e) => {
-    const { name, value } = e.target;
-    setEditFormData((prev) => ({ ...prev, [name]: value }));
-
-    if (name === "city") {
-      fetchBoardsByCity(value);
-      fetchServiceMenByCity(value);
-    }
   };
 
   const handleEditSubmit = async (e) => {
@@ -225,9 +167,12 @@ const ManageUsers = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
     try {
-      const res = await axios.delete(`${import.meta.env.VITE_API_URL_DELETE_USER}/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.delete(
+        `${import.meta.env.VITE_API_URL_DELETE_USER}/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       if (res.data.success) {
         toast.success("User deleted");
         fetchUsers();
@@ -254,8 +199,6 @@ const ManageUsers = () => {
                 <th className="py-3 px-4 text-left">Phone</th>
                 <th className="py-3 px-4 text-left">Address</th>
                 <th className="py-3 px-4 text-left">City</th>
-                <th className="py-3 px-4 text-left">Board</th>
-                <th className="py-3 px-4 text-left">Serviceman</th>
                 <th className="py-3 px-4 text-left">Role</th>
                 <th className="py-3 px-4 text-left">Actions</th>
               </tr>
@@ -268,8 +211,6 @@ const ManageUsers = () => {
                   <td className="py-3 px-4">{user.phone}</td>
                   <td className="py-3 px-4">{user.address}</td>
                   <td className="py-3 px-4">{user.city}</td>
-                  <td className="py-3 px-4">{user.boardId || "-"}</td>
-                  <td className="py-3 px-4">{user.servicemanId || "-"}</td>
                   <td className="py-3 px-4">{user.role}</td>
                   <td className="py-3 px-4 space-x-2">
                     <button
@@ -289,7 +230,7 @@ const ManageUsers = () => {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan="9" className="text-center py-3 text-gray-500">
+                  <td colSpan="7" className="text-center py-3 text-gray-500">
                     No {role}s found.
                   </td>
                 </tr>
@@ -312,32 +253,105 @@ const ManageUsers = () => {
         <div className="bg-white rounded-xl p-4 shadow-md border border-gray-200 mb-8">
           <h3 className="text-xl font-semibold mb-4">Add New User</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Name" className="border p-2 rounded w-full" />
-            <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email" className="border p-2 rounded w-full" />
-            <input type="text" name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone" className="border p-2 rounded w-full" />
-            <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Address" className="border p-2 rounded w-full" />
-            <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City" className="border p-2 rounded w-full" />
-            <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="Password" className="border p-2 rounded w-full" />
-            <select name="role" value={formData.role} onChange={handleChange} className="border p-2 rounded w-full">
-              <option value="client">Client</option>
-              <option value="serviceman">Serviceman</option>
-              <option value="manager">Manager</option>
-              <option value="admin">Admin</option>
-            </select>
-            <select name="boardId" value={formData.boardId} onChange={handleChange} className="border p-2 rounded w-full">
-              <option value="">Select Board</option>
-              {boards.map((b) => (
-                <option key={b._id} value={b._id}>{b.name}</option>
-              ))}
-            </select>
-            <select name="servicemanId" value={formData.servicemanId} onChange={handleChange} className="border p-2 rounded w-full">
-              <option value="">Select Serviceman</option>
-              {servicemen.map((s) => (
-                <option key={s._id} value={s._id}>{s.name}</option>
-              ))}
-            </select>
+            <div>
+              <label htmlFor="">Name:</label>
+              <br />
+              <br />
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Name"
+                className="border p-2 rounded w-full"
+              />
+            </div>
+            <div>
+              <label htmlFor="">Email:</label>
+              <br />
+              <br />
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Email"
+                className="border p-2 rounded w-full"
+              />
+            </div>
+            <div>
+              <label htmlFor="">Phone:</label>
+              <br />
+              <br />
+              <input
+                type="text"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="Phone"
+                className="border p-2 rounded w-full"
+              />
+            </div>
+            <div>
+              <label htmlFor="">Address:</label>
+              <br />
+              <br />
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                placeholder="Address"
+                className="border p-2 rounded w-full"
+              />
+            </div>
+            <div>
+              <label htmlFor="">City:</label>
+              <br />
+              <br />
+              <input
+                type="text"
+                name="city"
+                value={formData.city}
+                onChange={handleChange}
+                placeholder="City"
+                className="border p-2 rounded w-full"
+              />
+            </div>
+            <div>
+              <label htmlFor="">Password:</label>
+              <br />
+              <br />
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Password"
+                className="border p-2 rounded w-full"
+              />
+            </div>
+            <div>
+              <label htmlFor="">Select Role::</label>
+              <br />
+              <br />
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="border p-2 rounded w-full"
+              >
+                <option value="client">Client</option>
+                <option value="serviceman">Serviceman</option>
+                <option value="manager">Manager</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
           </div>
-          <button onClick={handleAddUser} className="mt-4 bg-[#2563eb] text-white px-4 py-2 rounded hover:bg-[#1e40af]">
+          <button
+            onClick={handleAddUser}
+            className="mt-4 bg-[#2563eb] text-white px-4 py-2 rounded hover:bg-[#1e40af]"
+          >
             Add User
           </button>
         </div>
@@ -352,34 +366,96 @@ const ManageUsers = () => {
             <div className="bg-white rounded-lg p-6 w-full max-w-md">
               <h3 className="text-xl font-semibold mb-4">Edit User</h3>
               <form onSubmit={handleEditSubmit} className="space-y-4">
-                <input type="text" name="name" value={editFormData.name} onChange={handleEditChange} placeholder="Name" className="border p-2 rounded w-full" required />
-                <input type="email" name="email" value={editFormData.email} onChange={handleEditChange} placeholder="Email" className="border p-2 rounded w-full" required />
-                <input type="text" name="phone" value={editFormData.phone} onChange={handleEditChange} placeholder="Phone" className="border p-2 rounded w-full" />
-                <input type="text" name="address" value={editFormData.address} onChange={handleEditChange} placeholder="Address" className="border p-2 rounded w-full" />
-                <input type="text" name="city" value={editFormData.city} onChange={handleEditChange} placeholder="City" className="border p-2 rounded w-full" />
-                <select name="role" value={editFormData.role} onChange={handleEditChange} className="border p-2 rounded w-full" required>
-                  <option value="client">Client</option>
-                  <option value="serviceman">Serviceman</option>
-                  <option value="manager">Manager</option>
-                  <option value="admin">Admin</option>
-                </select>
-                <select name="boardId" value={editFormData.boardId} onChange={handleEditChange} className="border p-2 rounded w-full">
-                  <option value="">Select Board</option>
-                  {boards.map((b) => (
-                    <option key={b._id} value={b._id}>{b.name}</option>
-                  ))}
-                </select>
-                <select name="servicemanId" value={editFormData.servicemanId} onChange={handleEditChange} className="border p-2 rounded w-full">
-                  <option value="">Select Serviceman</option>
-                  {servicemen.map((s) => (
-                    <option key={s._id} value={s._id}>{s.name}</option>
-                  ))}
-                </select>
+                <div>
+                  <label htmlFor="">Name:</label>
+                  <br />
+                  <input
+                    type="text"
+                    name="name"
+                    value={editFormData.name}
+                    onChange={handleEditChange}
+                    placeholder="Name"
+                    className="border p-2 rounded w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="">Email:</label>
+                  <br />
+                  <input
+                    type="email"
+                    name="email"
+                    value={editFormData.email}
+                    onChange={handleEditChange}
+                    placeholder="Email"
+                    className="border p-2 rounded w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="">Phone:</label>
+                  <br />
+                  <input
+                    type="text"
+                    name="phone"
+                    value={editFormData.phone}
+                    onChange={handleEditChange}
+                    placeholder="Phone"
+                    className="border p-2 rounded w-full"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="">Address:</label>
+                  <br />
+                  <input
+                    type="text"
+                    name="address"
+                    value={editFormData.address}
+                    onChange={handleEditChange}
+                    placeholder="Address"
+                    className="border p-2 rounded w-full"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="">City:</label>
+                  <br />
+                  <input
+                    type="text"
+                    name="city"
+                    value={editFormData.city}
+                    onChange={handleEditChange}
+                    placeholder="City"
+                    className="border p-2 rounded w-full"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="">Select Role:</label>
+                  <br />
+                  <select
+                    name="role"
+                    value={editFormData.role}
+                    onChange={handleEditChange}
+                    className="border p-2 rounded w-full"
+                    required
+                  >
+                    <option value="client">Client</option>
+                    <option value="serviceman">Serviceman</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
                 <div className="flex justify-end space-x-4 pt-4">
-                  <button type="button" onClick={closeEditModal} className="px-4 py-2 rounded border border-gray-400 hover:bg-gray-100">
+                  <button
+                    type="button"
+                    onClick={closeEditModal}
+                    className="px-4 py-2 rounded border border-gray-400 hover:bg-gray-100"
+                  >
                     Cancel
                   </button>
-                  <button type="submit" className="px-4 py-2 rounded bg-[#2563eb] text-white hover:bg-[#1e40af]">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded bg-[#2563eb] text-white hover:bg-[#1e40af]"
+                  >
                     Save Changes
                   </button>
                 </div>

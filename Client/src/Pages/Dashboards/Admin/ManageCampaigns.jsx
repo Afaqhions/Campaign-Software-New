@@ -11,6 +11,8 @@ const ManageCampaigns = () => {
   const [filteredBoards, setFilteredBoards] = useState([]);
   const [cities, setCities] = useState([]);
   const [selectedCity, setSelectedCity] = useState("");
+  const [serviceMen, setServiceMen] = useState([]);
+  const [clients, setClients] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
 
@@ -21,44 +23,57 @@ const ManageCampaigns = () => {
     noOfBoards: "",
     selectedBoards: [],
     clientEmail: "",
+    serviceManEmail: "",
     price: "",
   });
 
   const token = localStorage.getItem("token");
 
-  // ✅ Fetch Campaigns + Boards from DB
+  // Fetch Campaigns, Boards and Clients
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [campaignRes, boardsRes] = await Promise.all([
+        const [campaignRes, boardsRes, usersRes] = await Promise.all([
           axios.get(import.meta.env.VITE_API_URL_SEE_CAMPAIGNS, {
             headers: { Authorization: `Bearer ${token}` },
           }),
           axios.get(import.meta.env.VITE_API_URL_SEE_BOARD, {
             headers: { Authorization: `Bearer ${token}` },
           }),
+          axios.get(import.meta.env.VITE_API_URL_SEE_USERS, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         ]);
 
         const campaignsData = Array.isArray(campaignRes.data)
           ? campaignRes.data
-          : [];
+          : campaignRes.data.campaigns || [];
 
         const boardsData = Array.isArray(boardsRes.data)
           ? boardsRes.data
           : boardsRes.data.boards || [];
 
+        const usersData = Array.isArray(usersRes.data)
+          ? usersRes.data
+          : usersRes.data.users || [];
+
         setCampaigns(campaignsData);
 
-        // ✅ Boards already in use
+        const clientUsers = usersData.filter((user) => user.role === "client");
+        setClients(clientUsers);
+
         const usedBoardIds = campaignsData.flatMap((camp) =>
-          camp.selectedBoards.map((b) => b._id || b)
+          (camp.selectedBoards || []).map((b) =>
+            typeof b === "object" ? b._id : b
+          )
         );
 
-        // ✅ If editing, allow the campaign's own boards
         const selectedBoardIds = editId
           ? campaignsData
               .find((c) => c._id === editId)
-              ?.selectedBoards.map((b) => b._id || b) || []
+              ?.selectedBoards.map((b) =>
+                typeof b === "object" ? b._id : b
+              ) || []
           : [];
 
         const freeBoards = boardsData.filter(
@@ -69,11 +84,20 @@ const ManageCampaigns = () => {
 
         setAllBoards(freeBoards);
 
-        // ✅ Extract unique cities from boards for dropdown
-        const cityList = [...new Set(freeBoards.map((b) => b.City))];
+        const cityList = [...new Set(freeBoards.map((b) => b.City))].filter(
+          Boolean
+        );
         setCities(cityList);
+
+        if (selectedCity) {
+          setFilteredBoards(
+            freeBoards.filter(
+              (b) => b.City.toLowerCase() === selectedCity.toLowerCase()
+            )
+          );
+        }
       } catch (error) {
-        toast.error("Error loading campaigns or boards.");
+        toast.error("Error loading data.");
         console.error("Fetch error:", error);
       }
     };
@@ -81,13 +105,82 @@ const ManageCampaigns = () => {
     fetchData();
   }, [token, editId]);
 
-  // ✅ Handle City Change
-  const handleCityChange = (e) => {
+  // Fetch service men when selectedCity changes
+  useEffect(() => {
+    const fetchServiceMen = async () => {
+      if (!selectedCity) {
+        setServiceMen([]);
+        return;
+      }
+
+      try {
+        const url = `${import.meta.env.VITE_API_URL_FETCH_SERVICE_MAN_BY_CITY}/${encodeURIComponent(
+          selectedCity
+        )}`;
+        const res = await axios.get(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const rawData = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.serviceMen)
+          ? res.data.serviceMen
+          : Array.isArray(res.data?.data)
+          ? res.data.data
+          : [];
+
+        const serviceMenList = rawData.map((item) => {
+          if (typeof item === "string") {
+            return { email: item, name: item };
+          }
+          return {
+            _id: item._id,
+            email: item.email || item.serviceManEmail || "",
+            name: item.name || item.fullName || "No Name",
+          };
+        });
+
+        setServiceMen(serviceMenList);
+      } catch (err) {
+        setServiceMen([]);
+        toast.error("Failed to fetch service men for the selected city.");
+        console.error("Service men fetch error:", err);
+      }
+    };
+
+    fetchServiceMen();
+  }, [selectedCity, token]);
+
+  const handleCityChange = async (e) => {
     const city = e.target.value;
     setSelectedCity(city);
-    setFormData((prev) => ({ ...prev, selectedBoards: [] })); // reset boards selection
+    setFormData((prev) => ({
+      ...prev,
+      selectedBoards: [],
+      serviceManEmail: "",
+    }));
+
     if (city) {
-      setFilteredBoards(allBoards.filter((b) => b.City === city));
+      try {
+        const boardsUrl = `${import.meta.env.VITE_API_URL_FETCH_BOARDS_BY_CITY}/${encodeURIComponent(
+          city
+        )}`;
+        const res = await axios.get(boardsUrl, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const boardsData = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.boards)
+          ? res.data.boards
+          : [];
+
+        setFilteredBoards(boardsData);
+      } catch (error) {
+        toast.error("Failed to fetch boards for selected city.");
+        setFilteredBoards([]);
+        console.error("Board fetch error:", error);
+      }
     } else {
       setFilteredBoards([]);
     }
@@ -103,10 +196,10 @@ const ManageCampaigns = () => {
     }
   };
 
-  // ✅ Check if email already exists in another campaign
   const isEmailUnique = (email) => {
     return !campaigns.some(
       (c) =>
+        c.clientEmail &&
         c.clientEmail.toLowerCase() === email.toLowerCase() &&
         c._id !== editId
     );
@@ -122,37 +215,26 @@ const ManageCampaigns = () => {
       noOfBoards,
       selectedBoards,
       clientEmail,
+      serviceManEmail,
       price,
     } = formData;
 
-    // ✅ Basic Required Field Check
     if (
       !name.trim() ||
       !startDate ||
       !endDate ||
       !noOfBoards ||
-      !clientEmail.trim() ||
-      !price
+      !clientEmail ||
+      !serviceManEmail ||
+      !price ||
+      selectedBoards.length === 0
     ) {
-      toast.error("All required fields must be filled.");
+      toast.error("All required fields must be filled and boards selected.");
       return;
     }
 
-    // ✅ Email Format Validation
-    if (!/^\S+@\S+\.\S+$/.test(clientEmail)) {
-      toast.error("Please enter a valid email address.");
-      return;
-    }
-
-    // ✅ Unique Email Validation
     if (!isEmailUnique(clientEmail)) {
       toast.error("This client email is already used in another campaign.");
-      return;
-    }
-
-    // ✅ Board Selection Check
-    if (selectedBoards.length === 0) {
-      toast.error("Please select at least one board.");
       return;
     }
 
@@ -162,6 +244,9 @@ const ManageCampaigns = () => {
 
     const method = editId ? "put" : "post";
 
+    const clientObj = clients.find((c) => c.email === clientEmail);
+    const clientName = clientObj ? clientObj.name : "";
+
     const payload = {
       name: name.trim(),
       startDate: new Date(startDate),
@@ -169,6 +254,9 @@ const ManageCampaigns = () => {
       noOfBoards: parseInt(noOfBoards),
       selectedBoards,
       clientEmail: clientEmail.trim(),
+      clientName,
+      serviceManEmail,
+      city: selectedCity,
       price: parseFloat(price),
     };
 
@@ -191,8 +279,11 @@ const ManageCampaigns = () => {
         noOfBoards: "",
         selectedBoards: [],
         clientEmail: "",
+        serviceManEmail: "",
         price: "",
       });
+      setSelectedCity("");
+      setFilteredBoards([]);
 
       const updated = await axios.get(
         import.meta.env.VITE_API_URL_SEE_CAMPAIGNS,
@@ -211,17 +302,34 @@ const ManageCampaigns = () => {
   };
 
   const handleEdit = (campaign) => {
+    let cityFromCampaign = "";
+    if (campaign.selectedBoards && campaign.selectedBoards.length > 0) {
+      const firstBoard = campaign.selectedBoards[0];
+      cityFromCampaign =
+        typeof firstBoard === "object" ? firstBoard.City || "" : "";
+    }
+
+    setEditId(campaign._id);
+
+    if (cityFromCampaign) {
+      setSelectedCity(cityFromCampaign);
+    } else {
+      setSelectedCity("");
+    }
+
     setFormData({
       name: campaign.name,
       startDate: campaign.startDate.slice(0, 10),
       endDate: campaign.endDate.slice(0, 10),
       noOfBoards: campaign.noOfBoards,
-      selectedBoards: campaign.selectedBoards.map((b) => b._id || b),
+      selectedBoards: (campaign.selectedBoards || []).map((b) =>
+        typeof b === "object" ? b._id : b
+      ),
       clientEmail: campaign.clientEmail,
+      serviceManEmail: campaign.serviceManEmail || "",
       price: campaign.price,
     });
-    setSelectedCity(""); // reset city on edit
-    setEditId(campaign._id);
+
     setShowForm(true);
   };
 
@@ -252,7 +360,21 @@ const ManageCampaigns = () => {
           className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold px-6 py-2 rounded shadow-md"
           onClick={() => {
             setShowForm(!showForm);
-            if (!showForm) setEditId(null);
+            if (!showForm) {
+              setEditId(null);
+              setFormData({
+                name: "",
+                startDate: "",
+                endDate: "",
+                noOfBoards: "",
+                selectedBoards: [],
+                clientEmail: "",
+                serviceManEmail: "",
+                price: "",
+              });
+              setSelectedCity("");
+              setFilteredBoards([]);
+            }
           }}
         >
           {showForm ? "Close Form" : "Add Campaign"}
@@ -307,17 +429,30 @@ const ManageCampaigns = () => {
                 className="border p-2 w-full"
               />
             </label>
+
             <label>
               Client Email
-              <input
-                type="email"
+              <select
                 name="clientEmail"
                 value={formData.clientEmail}
                 onChange={handleChange}
                 required
                 className="border p-2 w-full"
-              />
+              >
+                <option value="">-- Select Client --</option>
+                {clients.length === 0 && (
+                  <option value="" disabled>
+                    No clients found
+                  </option>
+                )}
+                {clients.map(({ _id, name, email, city }) => (
+                  <option key={_id} value={email}>
+                    {`${name} - ${email} - ${city || "-"}`}
+                  </option>
+                ))}
+              </select>
             </label>
+
             <label>
               Price
               <input
@@ -330,13 +465,13 @@ const ManageCampaigns = () => {
               />
             </label>
 
-            {/* ✅ City Dropdown */}
             <label className="col-span-2">
               Select City
               <select
                 value={selectedCity}
                 onChange={handleCityChange}
                 className="border p-2 w-full"
+                required
               >
                 <option value="">-- Select City --</option>
                 {cities.map((city, idx) => (
@@ -347,7 +482,31 @@ const ManageCampaigns = () => {
               </select>
             </label>
 
-            {/* ✅ Boards Dropdown */}
+            <label className="col-span-2">
+              Assign Service Man
+              <select
+                name="serviceManEmail"
+                value={formData.serviceManEmail}
+                onChange={handleChange}
+                className="border p-2 w-full"
+                required
+              >
+                <option value="">-- Select Service Man --</option>
+                {serviceMen.length === 0 && (
+                  <option value="" disabled>
+                    {selectedCity
+                      ? "No service men found"
+                      : "Select a city first"}
+                  </option>
+                )}
+                {serviceMen.map(({ _id, email, name }) => (
+                  <option key={_id || email} value={email}>
+                    {name} - {email}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <label className="col-span-2">
               Select Boards
               <select
@@ -375,7 +534,6 @@ const ManageCampaigns = () => {
           </form>
         )}
 
-        {/* ✅ Campaign List */}
         <div className="mt-8 grid grid-cols-1 gap-4">
           {campaigns.map((campaign) => (
             <motion.div
@@ -388,7 +546,13 @@ const ManageCampaigns = () => {
                 {campaign.name}
               </h2>
               <p>📧 Email: {campaign.clientEmail}</p>
-              <p>💰 Price: PKR {campaign.price.toLocaleString()}</p>
+              <p>
+                👷 Service Man: {campaign.serviceManEmail || "—"}
+              </p>
+              <p>
+                💰 Price: PKR{" "}
+                {campaign.price?.toLocaleString?.() ?? campaign.price}
+              </p>
               <p>📋 Boards: {campaign.noOfBoards}</p>
               <p>
                 📅 Duration: {campaign.startDate.slice(0, 10)} →{" "}
@@ -398,9 +562,7 @@ const ManageCampaigns = () => {
                 Boards:{" "}
                 {campaign.selectedBoards
                   .map((b) =>
-                    typeof b === "object"
-                      ? `${b.BoardNo} - ${b.City}`
-                      : b
+                    typeof b === "object" ? `${b.BoardNo} - ${b.City}` : b
                   )
                   .join(", ")}
               </p>

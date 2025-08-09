@@ -22,7 +22,7 @@ import {
   deleteCampaign,
   getAllCampaigns,
   getBoardsByCity,
-  getServiceMenByCity,
+  getServiceManByCity, // ✅ fixed import name
   updateCampaign,
 } from '../Controllers/addCampaignController.js';
 
@@ -42,6 +42,7 @@ import {
   adminVerifyUploadById,
   adminGetAllUploads,
 } from '../Controllers/verifyUploadController.js';
+
 import { getVerifiedCampaignsForClient } from '../Controllers/verifiedClientCampaignsController.js';
 
 const router = express.Router();
@@ -62,9 +63,8 @@ router.get("/boards", getBoards);
 router.post("/boards/create", verifyToken, createBoard);
 router.put("/boards/:id", verifyToken, updateBoard);
 router.delete("/boards/:id", verifyToken, deleteBoard);
-router.get("/boards/:city", getBoardsByCity);
-router.get("/service-men/:city", getServiceMenByCity);
-
+router.get("/boards/city/:city", getBoardsByCity); // ✅ changed path to avoid conflict
+router.get("/service-men/city/:city", getServiceManByCity); // ✅ fixed path + import
 
 // ====================
 // ✅ Campaign Routes
@@ -77,7 +77,7 @@ router.put("/update-campaigns/:id", verifyToken, updateCampaign);
 // ================================
 // ✅ Service Man Upload Routes
 // ================================
-router.get("/get-uploads", verifyToken, getUploads); // Admin or serviceman
+router.get("/get-uploads", verifyToken, getUploads);
 router.post("/upload-pic", verifyToken, upload.single("image"), uploadServiceManPic);
 
 // ==============================
@@ -89,22 +89,14 @@ router.get("/assign/:email", verifyToken, getAssignmentsByEmail);
 
 // ====================
 // ✅ Client Routes
-// Display verified campaigns for clients
 // ====================
-router.get("/verifications/client-campaigns", verifyToken, getVerifiedCampaignsForClient); // ✅ protected route
+router.get("/verifications/client-campaigns", verifyToken, getVerifiedCampaignsForClient);
 
 // =============================
 // ✅ Verification Routes
 // =============================
-
-// ✅ Admin Verifies One Upload by ID
 router.put('/admin-verify-upload/:uploadId', verifyToken, adminVerifyUploadById);
-
-// ✅ Admin Verifies All Uploads
 router.put('/admin-verify-all', verifyToken, verifyAllServiceManUploads);
-
-// ✅ Admin Get All Uploads
-router.get("/admin-get-uploads", verifyToken, adminGetAllUploads); // ✅ NEW for Admin only
-
+router.get("/admin-get-uploads", verifyToken, adminGetAllUploads);
 
 export default router;
