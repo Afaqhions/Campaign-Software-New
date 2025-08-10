@@ -13,7 +13,6 @@ import ManagerDashboard from "./Pages/Dashboards/Admin/AdminDashboard";
 import ServiceDashboard from "./Pages/Dashboards/ServiceMan/ServicemanDashboard";
 
 // Admin Pages
-import AssignCampaigns from "./Pages/Dashboards/Admin/AssignCampaigns";
 import ManageBoards from "./Pages/Dashboards/Admin/ManageBoards";
 import ManageUsers from "./Pages/Dashboards/Admin/ManageUsers";
 import ManageCampaigns from "./Pages/Dashboards/Admin/ManageCampaigns";
@@ -30,7 +29,6 @@ const AppRoutes = () => {
       {/* Admin Pages (accessible to both admin and manager) */}
       <Route element={<ProtectedRoute allowedRoles={["admin", "manager"]} />}>
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
-        <Route path="/assign-campaigns" element={<AssignCampaigns />} />
         <Route path="/manage-boards" element={<ManageBoards />} />
         <Route path="/manage-users" element={<ManageUsers />} />
         <Route path="/manage-campaigns" element={<ManageCampaigns />} />

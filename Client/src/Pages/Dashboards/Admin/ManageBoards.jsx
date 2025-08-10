@@ -48,10 +48,10 @@ const ManageBoards = () => {
       async (position) => {
         const { latitude, longitude } = position.coords;
 
-        try {
+    try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
-          );
+      );
           const data = await res.json();
           const location = data.display_name || "Unknown location";
 
@@ -76,7 +76,7 @@ const ManageBoards = () => {
       (err) => {
         toast.error("Failed to access location: " + err.message);
         console.error("Geolocation error:", err);
-      }
+    }
     );
   };
 
@@ -229,16 +229,16 @@ const ManageBoards = () => {
                         {field}
                       </label>
                       {field === "Type" ? (
-                        <select
+        <select
                           name={field}
                           value={formData[field]}
-                          onChange={handleChange}
+          onChange={handleChange}
                           className="w-full p-2 border rounded"
-                          required
-                        >
+          required
+        >
                           <option value="backlit">Backlit</option>
                           <option value="frontlit">Frontlit</option>
-                        </select>
+        </select>
                       ) : (
                         <input
                           type={
@@ -254,9 +254,9 @@ const ManageBoards = () => {
                           step="any"
                           name={field}
                           value={formData[field]}
-                          onChange={handleChange}
+          onChange={handleChange}
                           className="w-full p-2 border rounded"
-                          required
+          required
                         />
                       )}
                     </div>
@@ -276,7 +276,7 @@ const ManageBoards = () => {
                       {isEditing ? "Update" : "Save"}
                     </button>
                   </div>
-                </form>
+      </form>
               </div>
             </div>
           )}

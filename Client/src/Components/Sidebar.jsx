@@ -48,9 +48,6 @@ const Sidebar = ({ isOpen, onClose }) => {
           <Link to="/view-board-stats" className="hover:text-blue-600">
             View Board Stats
           </Link>
-          <Link to="/assign-campaigns" className="hover:text-blue-600">
-            Assign Campaigns
-          </Link>
           <Link to="/verify-campaigns" className="hover:text-blue-600">
             Verify Campaigns
           </Link>

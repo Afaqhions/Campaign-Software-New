@@ -31,11 +31,6 @@ import {
   uploadServiceManPic,
 } from '../Controllers/serviceManController.js';
 
-import {
-  assignCampaign,
-  getAllAssignments,
-  getAssignmentsByEmail,
-} from '../Controllers/assignCampaignController.js';
 
 import {
   verifyAllServiceManUploads,
@@ -79,13 +74,6 @@ router.put("/update-campaigns/:id", verifyToken, updateCampaign);
 // ================================
 router.get("/get-uploads", verifyToken, getUploads);
 router.post("/upload-pic", verifyToken, upload.single("image"), uploadServiceManPic);
-
-// ==============================
-// ✅ Campaign Assignment Routes
-// ==============================
-router.post("/assign", verifyToken, assignCampaign);
-router.get("/assign/all", verifyToken, getAllAssignments);
-router.get("/assign/:email", verifyToken, getAssignmentsByEmail);
 
 // ====================
 // ✅ Client Routes
