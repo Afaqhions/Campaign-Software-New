@@ -27,6 +27,7 @@ import {
 } from '../Controllers/addCampaignController.js';
 
 import {
+  getCampaignsByServiceMan,
   getUploads,
   uploadServiceManPic,
 } from '../Controllers/serviceManController.js';
@@ -70,8 +71,10 @@ router.delete("/delete-campaigns/:id", verifyToken, deleteCampaign);
 router.put("/update-campaigns/:id", verifyToken, updateCampaign);
 
 // ================================
-// ✅ Service Man Upload Routes
+// ✅ Service Man 
 // ================================
+// route
+router.get("/campaigns/service-man/:email", getCampaignsByServiceMan);
 router.get("/get-uploads", verifyToken, getUploads);
 router.post("/upload-pic", verifyToken, upload.single("image"), uploadServiceManPic);
 

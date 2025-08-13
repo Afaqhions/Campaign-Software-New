@@ -23,7 +23,7 @@ const ManageCampaigns = () => {
     noOfBoards: "",
     selectedBoards: [],
     clientEmail: "",
-    serviceManEmail: "",
+    serviceManEmail: [],
     price: "",
   });
 
@@ -188,22 +188,15 @@ const ManageCampaigns = () => {
 
   const handleChange = (e) => {
     const { name, value, selectedOptions } = e.target;
-    if (name === "selectedBoards") {
+    if (name === "selectedBoards" || name === "serviceManEmail") {
       const selected = Array.from(selectedOptions).map((opt) => opt.value);
-      setFormData((prev) => ({ ...prev, selectedBoards: selected }));
+      setFormData((prev) => ({ ...prev, [name]: selected }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
-  const isEmailUnique = (email) => {
-    return !campaigns.some(
-      (c) =>
-        c.clientEmail &&
-        c.clientEmail.toLowerCase() === email.toLowerCase() &&
-        c._id !== editId
-    );
-  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -233,11 +226,6 @@ const ManageCampaigns = () => {
       return;
     }
 
-    if (!isEmailUnique(clientEmail)) {
-      toast.error("This client email is already used in another campaign.");
-      return;
-    }
-
     const url = editId
       ? `${import.meta.env.VITE_API_URL_UPDATE_CAMPAIGNS}/${editId}`
       : import.meta.env.VITE_API_URL_CREATE_CAMPAIGN;
@@ -259,6 +247,11 @@ const ManageCampaigns = () => {
       city: selectedCity,
       price: parseFloat(price),
     };
+
+    console.log("Sending payload:", payload);
+    console.log("Selected boards:", selectedBoards);
+    console.log("URL:", url);
+    console.log("Method:", method);
 
     try {
       await axios[method](url, payload, {
@@ -293,11 +286,21 @@ const ManageCampaigns = () => {
       );
       setCampaigns(updated.data);
     } catch (err) {
+      console.error("Submit error:", err);
+      console.error("Error response:", err?.response?.data);
+      
       const msg =
         err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
         "Server error while creating/updating campaign";
+      
       toast.error(msg);
-      console.error("Submit error:", err);
+      
+      // Log additional details for debugging
+      if (err?.response?.data?.details) {
+        console.error("Error details:", err.response.data.details);
+      }
     }
   };
 
@@ -326,7 +329,7 @@ const ManageCampaigns = () => {
         typeof b === "object" ? b._id : b
       ),
       clientEmail: campaign.clientEmail,
-      serviceManEmail: campaign.serviceManEmail || "",
+      serviceManEmail: campaign.serviceManEmail || [],
       price: campaign.price,
     });
 
@@ -486,6 +489,7 @@ const ManageCampaigns = () => {
               Assign Service Man
               <select
                 name="serviceManEmail"
+                multiple
                 value={formData.serviceManEmail}
                 onChange={handleChange}
                 className="border p-2 w-full"
@@ -547,7 +551,7 @@ const ManageCampaigns = () => {
               </h2>
               <p>📧 Email: {campaign.clientEmail}</p>
               <p>
-                👷 Service Man: {campaign.serviceManEmail || "—"}
+                👷 Service Man: {Array.isArray(campaign.serviceManEmail) ? campaign.serviceManEmail.join(", ") : campaign.serviceManEmail || "—"}
               </p>
               <p>
                 💰 Price: PKR{" "}

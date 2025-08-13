@@ -1,4 +1,6 @@
 import PicByServiceMan from "../Database/picByServiceManModel.js";
+import Campaign from "../Database/campaignsModel.js";
+import Board from "../Database/boardsModel.js";
 import path from "path";
 // Upload and Save to MongoDB
 export const uploadServiceManPic = async (req, res) => {
@@ -88,5 +90,30 @@ export const getUploads = async (req, res) => {
   } catch (error) {
     console.error("Error fetching uploads:", error);
     return res.status(500).json({ message: "Failed to fetch uploads" });
+  }
+};
+
+// ✅ Get campaigns assigned to a specific serviceman
+
+
+export const getCampaignsByServiceMan = async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    // Fetch campaigns directly by serviceManEmail
+    const campaigns = await Campaign.find({ serviceManEmail: email }).populate("selectedBoards").lean();
+
+    if (!campaigns.length) {
+      return res.status(404).json({ message: "No campaigns found for this service man" });
+    }
+
+    res.status(200).json({ data: campaigns });
+  } catch (error) {
+    console.error("Error fetching campaigns by service man:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };

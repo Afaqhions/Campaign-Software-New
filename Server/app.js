@@ -27,6 +27,16 @@ app.use('/api',routes);
 // To store pic locally
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
+// Global error handler
+app.use((error, req, res, next) => {
+  console.error('Global error handler:', error);
+  res.status(500).json({
+    message: 'Internal server error',
+    error: error.message,
+    stack: error.stack
+  });
+});
+
 // Start server only after DB connects
 const PORT = process.env.PORT;
 
